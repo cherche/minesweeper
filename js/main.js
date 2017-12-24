@@ -45,6 +45,7 @@ function render () {
       cell.addEventListener('contextmenu', (e) => {
         e.preventDefault()
         const tile = Game.map[x][y]
+        if (tile.state === 'revealed') return
         tile.state = (tile.state === 'flagged') ? 'hidden' : 'flagged'
         render()
       })
