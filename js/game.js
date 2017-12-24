@@ -27,6 +27,7 @@ Game.generateMap = () => {
 
   const arr = []
 
+  // Create 1D array with either bomb or 0
   for (let i = 0; i < numOfCells; i++) {
     if (i < numOfBombs) {
       arr.push(Tile('bomb'))
@@ -35,8 +36,14 @@ Game.generateMap = () => {
     }
   }
 
+  // Split array into 2D array where each
+  // sub-array has a length equal to the
+  // height defined in the options
   Game.map = splitInto2dArray(shuffle(arr), height)
 
+  // Go through the 2D array and replace
+  // all 0s with the appropriate number
+  // of bombs surrounding them
   Game.map.forEach((row, x) => {
     row.forEach((tile, y) => {
       if (tile.id === 'bomb') return
@@ -56,25 +63,27 @@ Game.reveal = ([x, y]) => {
   const { width, height } = Game.options
 
   const selected = Game.map[x][y]
+
+  // Small optimization (why bother at all
+  // if the tile has already been revealed?)
   if (selected.state === 'revealed') return
+
   selected.state = 'revealed'
 
   switch (selected.id) {
   case 'bomb':
-    Game.map.forEach((row) => {
-      row.forEach(tile => tile.state = 'revealed')
+    Game.map.forEach((row, x) => {
+      row.forEach((tile, y) => {
+        tile.state = 'revealed'
+      })
     })
     break;
   case 0:
-    getAdjacents(width, height, [x, y])
-      //.map(coordsToTile)
-      .forEach((coords) => {
-        const tile = coordsToTile(coords)
+    getAdjacents(width, height, [x, y]).forEach((coords) => {
+      const tile = coordsToTile(coords)
 
-        if (tile.state === 'revealed') return
-
-        Game.reveal([coords[0], coords[1]])
-      })
+      Game.reveal([coords[0], coords[1]])
+    })
     break;
   }
 }
