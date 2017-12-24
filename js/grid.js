@@ -18,3 +18,7 @@ export function getAdjacents (width, height, [x1, y1]) {
 
   return adjacents
 }
+
+export function coordsToVal (map, [x, y]) {
+  return map[x][y]
+}

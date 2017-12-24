@@ -1,5 +1,5 @@
 import { shuffle, splitInto2dArray } from './array-helpers.js'
-import { getAdjacents } from './grid.js'
+import { getAdjacents, coordsToVal } from './grid.js'
 
 function Tile (id) {
   return {
@@ -8,11 +8,10 @@ function Tile (id) {
   }
 }
 
-function coordsToTile ([x, y]) {
-  return Game.map[x][y]
-}
-
 const Game = { map: [] }
+
+// Create local coordsToVal() that uses Game.map
+Game.coordsToTile = coords => coordsToVal(Game.map, coords)
 
 Game.options = {
   width: 9,
@@ -36,20 +35,23 @@ Game.generateMap = () => {
     }
   }
 
+  const shuffled = shuffle(arr)
+
   // Split array into 2D array where each
   // sub-array has a length equal to the
   // height defined in the options
-  Game.map = splitInto2dArray(shuffle(arr), height)
+  Game.map = splitInto2dArray(shuffled, height)
 
-  // Go through the 2D array and replace
-  // all 0s with the appropriate number
-  // of bombs surrounding them
   Game.map.forEach((row, x) => {
     row.forEach((tile, y) => {
       if (tile.id === 'bomb') return
 
+      // Go through the 2D array and replace
+      // all 0s with the appropriate number
+      // of bombs surrounding them
+
       tile.id = getAdjacents(width, height, [x, y])
-        .map(coordsToTile)
+        .map(Game.coordsToTile)
         .reduce((count, {id}) => {
           return count + (id === 'bomb' ? 1 : 0)
         }, 0)
@@ -59,33 +61,39 @@ Game.generateMap = () => {
   return Game.map
 }
 
-Game.reveal = ([x, y]) => {
-  const { width, height } = Game.options
+// Game.reveal() may be doing too much right now
+// Break out some of the code?
+Game.reveal = (coordsQueue) => {
+  const { width, height, numOfBombs } = Game.options
 
-  const selected = Game.map[x][y]
+  coordsQueue.forEach(([x, y]) => {
+    const selected = Game.map[x][y]
 
-  // Small optimization (why bother at all
-  // if the tile has already been revealed?)
-  if (selected.state === 'revealed') return
+    // Small optimization (why bother at all
+    // if the tile has already been revealed?)
+    if (selected.state === 'revealed') return
 
-  selected.state = 'revealed'
+    selected.state = 'revealed'
 
-  switch (selected.id) {
-  case 'bomb':
-    Game.map.forEach((row, x) => {
-      row.forEach((tile, y) => {
-        tile.state = 'revealed'
+    switch (selected.id) {
+    // Reveal everything if you reveal a bomb
+    case 'bomb':
+      Game.map.forEach((row, x) => {
+        row.forEach((tile, y) => {
+          tile.state = 'revealed'
+        })
       })
-    })
-    break;
-  case 0:
-    getAdjacents(width, height, [x, y]).forEach((coords) => {
-      const tile = coordsToTile(coords)
-
-      Game.reveal([coords[0], coords[1]])
-    })
-    break;
-  }
+      break;
+    case 0:
+      // If you reveal a 0, there are no bombs
+      // directly adjacent, so just reveal all
+      // adjacent tiles for the player
+      Game.reveal(
+        getAdjacents(width, height, [x, y])
+      )
+      break;
+    }
+  })
 }
 
 export default Game
